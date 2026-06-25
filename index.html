@@ -328,6 +328,19 @@ function contactPill(x,y,S,T){
 }
 
 /* ===== main ===== */
+function drawLines(lines,x,topY,f,weight,LH,color){
+  ctx.fillStyle=color; ctx.font=`${weight} ${f}px "Be Vietnam Pro"`; ctx.textBaseline='alphabetic';
+  let base=topY+f*0.80;
+  for(const l of lines){ctx.fillText(l,x,base);base+=f*LH;}
+  return lines.length*f*LH;
+}
+function website(x,topY,fs,T){
+  const wb=topY+fs*0.80;
+  ctx.font=`600 ${fs}px "Be Vietnam Pro"`; ctx.fillStyle=T.textSub; ctx.textBaseline='alphabetic';
+  icon(ctx,ICON_GLOBE,x,wb-fs*0.78,fs,state.accent);
+  ctx.fillText(state.web,x+fs*1.4,wb);
+}
+
 function draw(){
   const {w:W,h:H}=SIZES[state.size];
   canvas.width=W; canvas.height=H;
@@ -371,52 +384,47 @@ function draw(){
     const chip=Math.min(150*S, W*0.18);
     logoChip(W-mg-chip, mg-4*S, chip, T);
 
-    let y = mg + markH + 30*S;
-    const ebH = eyebrow(mg, y, S, T);
-    y += 26*S;
+    const afterMark = mg + markH + 30*S;
+    eyebrow(mg, afterMark, S, T);
 
-    // photo panel — fills middle
-    const bottomBlock = H*0.30;
-    const panelY = y;
-    const panelBottom = H - bottomBlock - mg*0.2;
-    photoPanel(mg, panelY, W-2*mg, panelBottom-panelY, T);
-
-    // bottom block (text left, QR right)
-    let by = panelBottom + 38*S;
-    const blockTop = by;
+    // ---- bottom block, anchored to the BOTTOM edge ----
     const showQR = state.showQR && _qr.complete && _qr.naturalWidth;
-    let qrSize = 0, qrX = W - mg;
-    if(showQR){
-      qrSize = Math.min(206*S, W*0.215, (H - mg - blockTop)/1.30);
-      qrX = W - mg - qrSize;
-    }
-    const colW = (showQR ? qrX - 28*S : W - mg) - mg;
+    let qrSize = showQR ? Math.min(196*S, W*0.205) : 0;
+    let qrX = W - mg - qrSize;
+    const colW = (showQR ? qrX - 30*S : W - mg) - mg;
 
     const nm=fit(ctx,state.name.toUpperCase(),colW,2,54*S,28*S,800,false);
-    ctx.fillStyle=T.textMain; ctx.font=`800 ${nm.f}px "Be Vietnam Pro"`;
-    by+=nm.f;
-    for(const l of nm.lines){ctx.fillText(l,mg,by);by+=nm.f*1.04;}
-
-    by+=6*S;
     const ds=fit(ctx,state.desc,colW,2,26*S,17*S,500,false);
-    ctx.fillStyle=T.textSub; ctx.font=`500 ${ds.f}px "Be Vietnam Pro"`;
-    by+=ds.f;
-    for(const l of ds.lines){ctx.fillText(l,mg,by);by+=ds.f*1.3;}
+    const pillFs=Math.round(30*S), pillH=pillFs*1.5, webFs=21*S;
+    const gName=10*S,gDesc=20*S,gPill=14*S;
+    const nameH=nm.lines.length*nm.f*1.08;
+    const descH=ds.lines.length*ds.f*1.34;
+    const webH=webFs*1.25;
+    const blockH=nameH+gName+descH+gDesc+pillH+gPill+webH;
+    const blockTop=H-mg-blockH;
+    if(showQR){ qrSize=Math.min(qrSize, blockH/1.30); qrX=W-mg-qrSize; }
 
-    by+=18*S;
-    const pillH=contactPill(mg,by,S,T);
-    by+=pillH+20*S;
-    // website under pill
-    ctx.font=`600 ${21*S}px "Be Vietnam Pro"`;
-    ctx.fillStyle=T.textSub; ctx.textBaseline='middle';
-    icon(ctx,ICON_GLOBE,mg,by-12*S,23*S,state.accent);
-    ctx.fillText(state.web,mg+32*S,by);
-    ctx.textBaseline='alphabetic';
+    // photo panel fills the middle
+    const panelTop=afterMark+26*S;
+    const panelBottom=blockTop-26*S;
+    photoPanel(mg, panelTop, W-2*mg, Math.max(panelBottom-panelTop, H*0.16), T);
 
-    if(showQR) drawQR(qrX, blockTop, qrSize, S, T, true);
+    // draw block top->down
+    let y=blockTop;
+    drawLines(nm.lines, mg, y, nm.f, 800, 1.08, T.textMain); y+=nameH+gName;
+    drawLines(ds.lines, mg, y, ds.f, 500, 1.34, T.textSub); y+=descH+gDesc;
+    contactPill(mg, y, S, T); y+=pillH+gPill;
+    website(mg, y, webFs, T);
+
+    if(showQR){
+      const qrTotal=qrSize*1.30;
+      const qrTop=blockTop+Math.max(0,(blockH-qrTotal)/2);
+      drawQR(qrX, qrTop, qrSize, S, T, true);
+    }
 
   }else{
     /* -------- HORIZONTAL (ngang / bìa) -------- */
+    const wide = W/H>2.2;
     const colW = W*0.46;
     const markW=Math.min(colW*0.82, 300*S);
     const markH=drawLogo(mg, mg, markW);
@@ -424,39 +432,33 @@ function draw(){
     // photo right
     const px=W*0.50, pw=W-mg-px, py=mg, ph=H-2*mg;
     photoPanel(px,py,pw,ph,T);
-    // distributor logo chip top-right corner of photo
     const chip=Math.min(118*S, ph*0.30);
     logoChip(px+pw-chip-mg*0.4, py+mg*0.4, chip, T);
-
-    let y=mg+markH+24*S;
-    eyebrow(mg,y,S,T); y+=24*S;
-
-    const nm=fit(ctx,state.name.toUpperCase(),colW,2,52*S,26*S,800,false);
-    ctx.fillStyle=T.textMain; ctx.font=`800 ${nm.f}px "Be Vietnam Pro"`;
-    y+=nm.f;
-    for(const l of nm.lines){ctx.fillText(l,mg,y);y+=nm.f*1.04;}
-
-    y+=6*S;
-    const ds=fit(ctx,state.desc,colW,3,24*S,15*S,500,false);
-    ctx.fillStyle=T.textSub; ctx.font=`500 ${ds.f}px "Be Vietnam Pro"`;
-    y+=ds.f;
-    for(const l of ds.lines){ctx.fillText(l,mg,y);y+=ds.f*1.28;}
-
-    y+=16*S;
-    const pillH=contactPill(mg,y,S,T);
-    // website under pill
-    ctx.font=`600 ${20*S}px "Be Vietnam Pro"`;
-    ctx.fillStyle=T.textSub; ctx.textBaseline='middle';
-    icon(ctx,ICON_GLOBE,mg,y+pillH+14*S-10*S,22*S,state.accent);
-    ctx.fillText(state.web,mg+30*S,y+pillH+14*S+1*S);
-    ctx.textBaseline='alphabetic';
-    // QR card bottom-right corner (over photo)
     if(state.showQR && _qr.complete && _qr.naturalWidth){
-      const qs=Math.min(150*S, ph*0.34, H*0.30);
-      drawQR(W-mg-qs-6*S, H-mg-qs-6*S, qs, S, T, false);
+      const qs=Math.min(150*S, ph*0.34);
+      drawQR(px+pw-qs-mg*0.4, py+ph-qs-mg*0.4, qs, S, T, false);
     }
+
+    // left text group, vertically centered
+    const ebFs=15*S;
+    const nm=fit(ctx,state.name.toUpperCase(),colW,wide?1:2,50*S,24*S,800,false);
+    const ds=fit(ctx,state.desc,colW,wide?2:3,23*S,15*S,500,false);
+    const pillFs=Math.round(28*S), pillH=pillFs*1.5, webFs=20*S;
+    const gEb=16*S,gName=8*S,gDesc=18*S,gPill=14*S;
+    const nameH=nm.lines.length*nm.f*1.08;
+    const descH=ds.lines.length*ds.f*1.34;
+    const groupH=ebFs+gEb+nameH+gName+descH+gDesc+pillH+gPill+webFs*1.25;
+    const areaTop=mg+markH+18*S, areaBottom=H-mg;
+    let y=areaTop+Math.max(0,(areaBottom-areaTop-groupH)/2);
+
+    eyebrow(mg, y+ebFs, S, T); y+=ebFs+gEb;
+    drawLines(nm.lines, mg, y, nm.f, 800, 1.08, T.textMain); y+=nameH+gName;
+    drawLines(ds.lines, mg, y, ds.f, 500, 1.34, T.textSub); y+=descH+gDesc;
+    contactPill(mg, y, S, T); y+=pillH+gPill;
+    website(mg, y, webFs, T);
   }
 }
+
 
 /* ===== UI ===== */
 const sw=document.getElementById('swatches');
